@@ -284,193 +284,345 @@ Utilities.parseMultipart = function(e){
 
   <script>
     // ===== Icons
-    lucide.createIcons();
+  lucide.createIcons();
 
-    // ===== Theme toggle (demo only)
-    const themeToggle = document.getElementById('themeToggle');
-    if(themeToggle){
-      themeToggle.addEventListener('click', ()=>{
-        document.body.classList.toggle('bg-white');
-      });
+  // ===== Theme toggle (demo only)
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('bg-white');
+    });
+  }
+
+  // ===== Tabs logic
+  const btns = document.querySelectorAll('.tab-btn');
+  const sections = [
+    'tab-deskripsi',
+    'tab-kegiatan',
+    'tab-pengumuman',
+    'tab-data',
+    'tab-bantuan'
+  ].map(id => document.getElementById(id));
+
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.classList.remove('tab-active'));
+    b.classList.add('tab-active');
+    sections.forEach(s => s.classList.add('hidden'));
+    document.getElementById(b.dataset.tab).classList.remove('hidden');
+    // render pengumuman saat pertama buka
+    if (b.dataset.tab === 'tab-pengumuman') { muatPengumuman(); }
+  }));
+
+  // ===== Data demo yang dapat disesuaikan
+  const dataWilayah = JSON.parse(localStorage.getItem('sidali:dataWilayah') || 'null') || {
+    luas: 6100,
+    penduduk: 320000,
+    kec: 15,
+    kel: 248,
+    ringkasan: 'Kabupaten Tapanuli Selatan memiliki potensi pertanian, perkebunan, pariwisata alam serta pertambangan. Pemerintahan daerah mendorong layanan publik digital dan kolaborasi lintas kecamatan.'
+  };
+
+  function formatNumber(n) { return new Intl.NumberFormat('id-ID').format(n); }
+
+  function renderStats() {
+    document.getElementById('statLuas').textContent = formatNumber(dataWilayah.luas);
+    document.getElementById('statPenduduk').textContent = formatNumber(dataWilayah.penduduk);
+    document.getElementById('statKec').textContent = formatNumber(dataWilayah.kec);
+    document.getElementById('statKel').textContent = formatNumber(dataWilayah.kel);
+    document.getElementById('ringkasan').textContent = dataWilayah.ringkasan;
+    document.getElementById('lastUpdated').textContent =
+      'Terakhir diperbarui: ' + new Date().toLocaleString('id-ID');
+  }
+
+  function openEditor() {
+    const luas = prompt('Luas wilayah (km²):', dataWilayah.luas);
+    const pend = prompt('Jumlah penduduk:', dataWilayah.penduduk);
+    const kec = prompt('Jumlah kecamatan:', dataWilayah.kec);
+    const kel = prompt('Jumlah kel/desa:', dataWilayah.kel);
+    const ring = prompt('Ringkasan singkat:', dataWilayah.ringkasan);
+    if (luas && pend && kec && kel && ring) {
+      dataWilayah.luas = +luas;
+      dataWilayah.penduduk = +pend;
+      dataWilayah.kec = +kec;
+      dataWilayah.kel = +kel;
+      dataWilayah.ringkasan = ring;
+      localStorage.setItem('sidali:dataWilayah', JSON.stringify(dataWilayah));
+      renderStats();
+      drawCharts();
     }
+  }
+  window.openEditor = openEditor;
 
-    // ===== Tabs logic
-    const btns = document.querySelectorAll('.tab-btn');
-    const sections = ['tab-deskripsi','tab-kegiatan','tab-pengumuman','tab-data','tab-bantuan'].map(id=>document.getElementById(id));
-    btns.forEach(b=>b.addEventListener('click',()=>{
-      btns.forEach(x=>x.classList.remove('tab-active'));
-      b.classList.add('tab-active');
-      sections.forEach(s=>s.classList.add('hidden'));
-      document.getElementById(b.dataset.tab).classList.remove('hidden');
-      // render pengumuman saat pertama buka
-      if(b.dataset.tab==='tab-pengumuman'){ muatPengumuman(); }
-    }));
+  // ===== Charts
+  let c1, c2, c3;
+  function drawCharts() {
+    [c1, c2, c3].forEach(x => x && x.destroy());
+    const ctx1 = document.getElementById('chartPenduduk');
+    const ctx2 = document.getElementById('chartKec');
+    const ctx3 = document.getElementById('chartGrowth');
 
-    // ===== Data demo yang dapat disesuaikan
-    const dataWilayah = JSON.parse(localStorage.getItem('sidali:dataWilayah')||'null') || {
-      luas: 6100,
-      penduduk: 320000,
-      kec: 15,
-      kel: 248,
-      ringkasan: 'Kabupaten Tapanuli Selatan memiliki potensi pertanian, perkebunan, pariwisata alam serta pertambangan. Pemerintahan daerah mendorong layanan publik digital dan kolaborasi lintas kecamatan.'
-    };
+    c1 = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Usia Produktif', 'Usia Non-Produktif'],
+        datasets: [{
+          data: [
+            Math.round(dataWilayah.penduduk * 0.67),
+            Math.round(dataWilayah.penduduk * 0.33)
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: { plugins: { legend: { position: 'bottom' } } }
+    });
 
-    function formatNumber(n){ return new Intl.NumberFormat('id-ID').format(n); }
-
-    function renderStats(){
-      document.getElementById('statLuas').textContent = formatNumber(dataWilayah.luas);
-      document.getElementById('statPenduduk').textContent = formatNumber(dataWilayah.penduduk);
-      document.getElementById('statKec').textContent = formatNumber(dataWilayah.kec);
-      document.getElementById('statKel').textContent = formatNumber(dataWilayah.kel);
-      document.getElementById('ringkasan').textContent = dataWilayah.ringkasan;
-      document.getElementById('lastUpdated').textContent = 'Terakhir diperbarui: ' + new Date().toLocaleString('id-ID');
-    }
-
-    function openEditor(){
-      const luas = prompt('Luas wilayah (km²):', dataWilayah.luas);
-      const pend = prompt('Jumlah penduduk:', dataWilayah.penduduk);
-      const kec = prompt('Jumlah kecamatan:', dataWilayah.kec);
-      const kel = prompt('Jumlah kel/desa:', dataWilayah.kel);
-      const ring = prompt('Ringkasan singkat:', dataWilayah.ringkasan);
-      if(luas&&pend&&kec&&kel&&ring){
-        dataWilayah.luas=+luas; dataWilayah.penduduk=+pend; dataWilayah.kec=+kec; dataWilayah.kel=+kel; dataWilayah.ringkasan=ring;
-        localStorage.setItem('sidali:dataWilayah', JSON.stringify(dataWilayah));
-        renderStats();
-        drawCharts();
-      }
-    }
-
-    // ===== Charts
-    let c1,c2,c3;
-    function drawCharts(){
-      // Destroy old
-      [c1,c2,c3].forEach(x=>x && x.destroy());
-      const ctx1 = document.getElementById('chartPenduduk');
-      const ctx2 = document.getElementById('chartKec');
-      const ctx3 = document.getElementById('chartGrowth');
-
-      c1 = new Chart(ctx1,{type:'doughnut', data:{
-        labels:['Usia Produktif','Usia Non-Produktif'],
-        datasets:[{data:[Math.round(dataWilayah.penduduk*0.67), Math.round(dataWilayah.penduduk*0.33)], borderWidth:0}]
-      }, options:{plugins:{legend:{position:'bottom'}}}});
-
-      c2 = new Chart(ctx2,{type:'bar', data:{
-        labels:['Kec 1','Kec 2','Kec 3','Kec 4','Kec 5','Kec 6'],
-        datasets:[{label:'Penduduk/10k', data:[12,8,10,6,9,7], borderWidth:0}]
-      }, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
-
-      c3 = new Chart(ctx3,{type:'line', data:{
-        labels:['2019','2020','2021','2022','2023','2024'],
-        datasets:[{label:'Pertumbuhan (%)', data:[1.1,1.0,0.9,1.2,1.3,1.1], fill:false, tension:.3, borderWidth:2}]
-      }, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:false}}}});
-    }
-
-    // ===== Form submit to Apps Script (Drive)
-    const form = document.getElementById('formKegiatan');
-    const statusKirim = document.getElementById('statusKirim');
-    const endpointShown = document.getElementById('endpointShown');
-    const APPS_SCRIPT_URL = localStorage.getItem('sidali:endpoint') || '';
-    if(APPS_SCRIPT_URL){ endpointShown.textContent = APPS_SCRIPT_URL; }
-
-    function setEndpointPrompt(){
-      const url = prompt('Tempel URL Web App (Apps Script):', localStorage.getItem('sidali:endpoint')||'');
-      if(url){ localStorage.setItem('sidali:endpoint', url); endpointShown.textContent = url; alert('Endpoint disetel.'); }
-    }
-    window.setEndpointPrompt = setEndpointPrompt; // expose to button
-
-    form && form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const url = localStorage.getItem('sidali:endpoint');
-      if(!url){ alert('Silakan setel URL Web App terlebih dahulu.'); return; }
-      try{
-        statusKirim.textContent = 'Mengirim…';
-        const fd = new FormData();
-        fd.append('fNama', document.getElementById('fNama').value.trim());
-        fd.append('fTanggal', document.getElementById('fTanggal').value);
-        fd.append('fKec', document.getElementById('fKec').value.trim());
-        fd.append('fDesk', document.getElementById('fDesk').value.trim());
-        const file = document.getElementById('fLampiran').files[0];
-        if(file){ fd.append('file', file, file.name); }
-
-        const res = await fetch(url, { method:'POST', body:fd });
-        const out = await res.json();
-        if(out.ok){
-          statusKirim.textContent = 'Terkirim';
-          simpanLokalPengumuman({
-            nama: fd.get('fNama'), tanggal: fd.get('fTanggal'), kecamatan: fd.get('fKec'), deskripsi: fd.get('fDesk'), bukti: out.fileUrl || ''
-          });
-          form.reset();
-          alert('Kegiatan tersimpan.');
-        }else{
-          statusKirim.textContent = 'Gagal';
-          alert('Gagal: '+(out.error||'Tidak diketahui'));
-        }
-      }catch(err){
-        statusKirim.textContent = 'Gagal';
-        alert('Kesalahan jaringan: '+err.message);
+    c2 = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: ['Kec 1', 'Kec 2', 'Kec 3', 'Kec 4', 'Kec 5', 'Kec 6'],
+        datasets: [{
+          label: 'Penduduk/10k',
+          data: [12, 8, 10, 6, 9, 7],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
       }
     });
 
-    function simpanLokalPengumuman(item){
-      const arr = JSON.parse(localStorage.getItem('sidali:pengumuman')||'[]');
-      arr.unshift({...item, created: new Date().toISOString()});
-      localStorage.setItem('sidali:pengumuman', JSON.stringify(arr));
-      muatPengumuman();
-    }
-
-    async function muatPengumuman(forceRemote){
-      const cont = document.getElementById('listPengumuman');
-      cont.innerHTML = '';
-
-      const url = localStorage.getItem('sidali:endpoint');
-      let data = [];
-      if(url && !forceRemote){
-        // gabungkan lokal + remote (jika ada doGet?action=list)
-        try{
-          const resp = await fetch(url+'?action=list');
-          const json = await resp.json();
-          if(json.ok){ data = json.data; }
-        }catch(_){}
+    c3 = new Chart(ctx3, {
+      type: 'line',
+      data: {
+        labels: ['2019', '2020', '2021', '2022', '2023', '2024'],
+        datasets: [{
+          label: 'Pertumbuhan (%)',
+          data: [1.1, 1.0, 0.9, 1.2, 1.3, 1.1],
+          fill: false,
+          tension: .3,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: false } }
       }
-      // fallback lokal
-      if(data.length===0){ data = JSON.parse(localStorage.getItem('sidali:pengumuman')||'[]'); }
+    });
+  }
 
-      if(data.length===0){
-        cont.innerHTML = '<p class="text-sm text-emerald-700/80">Belum ada pengumuman. Unggah kegiatan terlebih dahulu.</p>';
+  // ====== KONFIGURASI MASTER KEGIATAN & PENGUMUMAN
+  // Endpoint Apps Script (file master Kegiatan Kecamatan)
+  const DEFAULT_ENDPOINT =
+    'https://script.google.com/macros/s/AKfycby4Ton6DuKWUYk5tjlTMRipla4nyoti0zj89M3nBnp-S3Rdvm68hv8wm_isdwDcoKk0Fw/exec';
+
+  // Link CSV master sheet Pengumuman
+  const SHEET_CSV_URL =
+    'https://docs.google.com/spreadsheets/d/1dVejLEpBx_ypeKR6o3F26ebX-jKRwPRZhNV2KOXW2V8/export?format=csv&gid=0';
+
+  // ===== Form submit ke Apps Script (Drive + Sheet master)
+  const form = document.getElementById('formKegiatan');
+  const statusKirim = document.getElementById('statusKirim');
+  const endpointShown = document.getElementById('endpointShown');
+
+  const APPS_SCRIPT_URL =
+    localStorage.getItem('sidali:endpoint') || DEFAULT_ENDPOINT;
+
+  if (endpointShown && APPS_SCRIPT_URL) {
+    endpointShown.textContent = APPS_SCRIPT_URL;
+  }
+
+  function setEndpointPrompt() {
+    const url = prompt(
+      'Tempel URL Web App (Apps Script):',
+      localStorage.getItem('sidali:endpoint') || APPS_SCRIPT_URL
+    );
+    if (url) {
+      localStorage.setItem('sidali:endpoint', url);
+      if (endpointShown) endpointShown.textContent = url;
+      alert('Endpoint disetel.');
+    }
+  }
+  window.setEndpointPrompt = setEndpointPrompt;
+
+  form && form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = localStorage.getItem('sidali:endpoint') || DEFAULT_ENDPOINT;
+
+    try {
+      statusKirim.textContent = 'Mengirim…';
+
+      const fd = new FormData();
+      fd.append('fNama', document.getElementById('fNama').value.trim());
+      fd.append('fTanggal', document.getElementById('fTanggal').value);
+      fd.append('fKec', document.getElementById('fKec').value.trim());
+      fd.append('fDesk', document.getElementById('fDesk').value.trim());
+
+      const file = document.getElementById('fLampiran').files[0];
+      if (file) {
+        // "file" harus sama dengan parameter di Apps Script
+        fd.append('file', file, file.name);
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: fd
+      });
+
+      let out = {};
+      try {
+        out = await res.json();
+      } catch (_) {
+        // kalau bukan JSON, anggap saja berhasil bila status OK
+        out = { ok: res.ok };
+      }
+
+      if (!res.ok || out.ok === false) {
+        throw new Error(out.error || ('Status HTTP ' + res.status));
+      }
+
+      statusKirim.textContent = 'Terkirim';
+      form.reset();
+      alert('Kegiatan tersimpan di master sheet.');
+      // refresh tampilan pengumuman dari master sheet
+      muatPengumuman();
+    } catch (err) {
+      statusKirim.textContent = 'Gagal';
+      alert('Gagal mengirim: ' + err.message);
+    }
+  });
+
+  // ===== Utility kecil
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"]/g, s => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;'
+    }[s]));
+  }
+
+  function formatTanggal(s) {
+    try {
+      return new Date(s).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return s;
+    }
+  }
+
+  // Parser CSV sederhana (support tanda kutip)
+  function parseCSV(text) {
+    const rows = [];
+    let cur = '';
+    let row = [];
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === '"') {
+        if (inQuotes && text[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (c === ',' && !inQuotes) {
+        row.push(cur);
+        cur = '';
+      } else if ((c === '\n' || c === '\r') && !inQuotes) {
+        if (cur !== '' || row.length) {
+          row.push(cur);
+          rows.push(row);
+          row = [];
+          cur = '';
+        }
+      } else {
+        cur += c;
+      }
+    }
+    if (cur !== '' || row.length) {
+      row.push(cur);
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  // ===== Muat Pengumuman dari master CSV
+  async function muatPengumuman() {
+    const cont = document.getElementById('listPengumuman');
+    if (!cont) return;
+
+    cont.innerHTML =
+      '<p class="text-sm text-emerald-700/80">Memuat data pengumuman dari master sheet...</p>';
+
+    try {
+      const resp = await fetch(SHEET_CSV_URL);
+      if (!resp.ok) {
+        throw new Error('HTTP ' + resp.status);
+      }
+      const text = await resp.text();
+      const rows = parseCSV(text);
+
+      // Asumsi struktur: [0]=timestamp, [1]=nama, [2]=tanggal,
+      // [3]=kecamatan, [4]=deskripsi, [5]=namaFile, [6]=url bukti
+      if (!rows || rows.length <= 1) {
+        cont.innerHTML =
+          '<p class="text-sm text-emerald-700/80">Belum ada pengumuman di master sheet.</p>';
         return;
       }
 
-      data.forEach(item=>{
+      cont.innerHTML = '';
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || !r.length || r.join('').trim() === '') continue;
+
+        const created = r[0] || '';
+        const nama = r[1] || '';
+        const tanggal = r[2] || created;
+        const kecamatan = r[3] || '';
+        const deskripsi = r[4] || '';
+        const bukti = r[6] || '';
+
         const card = document.createElement('article');
-        card.className = 'glass rounded-2xl p-4 border border-emerald-100 shadow-sm flex flex-col gap-2';
+        card.className =
+          'glass rounded-2xl p-4 border border-emerald-100 shadow-sm flex flex-col gap-2';
         card.innerHTML = `
           <div class="flex items-center justify-between">
-            <h3 class="font-semibold text-emerald-900">${escapeHtml(item.kecamatan||'-')}</h3>
-            <span class="text-xs text-emerald-700/70">${formatTanggal(item.tanggal||item.created)}</span>
+            <h3 class="font-semibold text-emerald-900">${escapeHtml(kecamatan || '-')}</h3>
+            <span class="text-xs text-emerald-700/70">${formatTanggal(tanggal)}</span>
           </div>
-          <p class="text-sm text-emerald-900/90"><b>${escapeHtml(item.nama||'-')}</b></p>
-          <p class="text-sm text-emerald-900/90">${escapeHtml(item.deskripsi||'-')}</p>
-          ${item.bukti ? `<a class="mt-1 inline-flex items-center gap-2 text-sm text-emerald-800 underline" href="${item.bukti}" target="_blank" rel="noopener">Lihat Bukti<i data-lucide="external-link" class="w-4 h-4"></i></a>`:''}
+          <p class="text-sm text-emerald-900/90"><b>${escapeHtml(nama || '-')}</b></p>
+          <p class="text-sm text-emerald-900/90">${escapeHtml(deskripsi || '-')}</p>
+          ${bukti
+            ? `<a class="mt-1 inline-flex items-center gap-2 text-sm text-emerald-800 underline" href="${bukti}" target="_blank" rel="noopener">
+                 Lihat Bukti<i data-lucide="external-link" class="w-4 h-4"></i>
+               </a>`
+            : ''
+          }
         `;
         cont.appendChild(card);
-      });
+      }
+
       lucide.createIcons();
+    } catch (err) {
+      cont.innerHTML =
+        '<p class="text-sm text-red-700/80">Gagal memuat pengumuman dari master sheet: ' +
+        escapeHtml(err.message) + '</p>';
     }
+  }
+  window.muatPengumuman = muatPengumuman;
 
-    function escapeHtml(str){
-      return String(str).replace(/[&<>\"]/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[s]));
-    }
-    function formatTanggal(s){
-      try{ return new Date(s).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); }catch{ return s; }
-    }
-
-    // ===== Init
-    (function init(){
-      document.getElementById('y').textContent = new Date().getFullYear();
-      renderStats();
-      drawCharts();
-      // muat pengumuman jika tab dibuka; untuk awal biarkan kosong agar cepat
-    })();
+  // ===== Init
+  (function init() {
+    document.getElementById('y').textContent = new Date().getFullYear();
+    renderStats();
+    drawCharts();
+    // pengumuman akan dimuat saat tab Pengumuman diklik
+  })();
   </script>
 </body>
 </html>
